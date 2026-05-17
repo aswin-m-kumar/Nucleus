@@ -1,8 +1,10 @@
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from core.config import settings
 from core.supabase import supabase
 
+logger = logging.getLogger("nucleus.auth")
 security = HTTPBearer()
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -17,13 +19,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
         
         auth_user = auth_response.user
-        user_id = auth_user.id
+        user_id = str(auth_user.id)  # Ensure string UUID from JWT "sub" field
+        logger.info(f"[AUTH] JWT resolved -> id={user_id}, email={auth_user.email}")
         
         # Try to fetch user details from our users table
         response = supabase.table("users").select("*").eq("id", user_id).execute()
         
         if response.data and len(response.data) > 0:
-            return response.data[0]
+            db_user = response.data[0]
+            logger.info(f"[AUTH] DB user matched -> id={db_user['id']}, role={db_user['role']}")
+            return db_user
         
         # User exists in auth but not in our users table — auto-create their profile
         meta = auth_user.user_metadata or {}
