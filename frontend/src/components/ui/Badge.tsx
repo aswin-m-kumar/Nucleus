@@ -1,35 +1,35 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '../../utils/tailwind';
 
-type BadgeVariant = 'approved' | 'submitted' | 'draft' | 'returned' | 'on-track' | 'completed' | 'not-started';
+type BadgeVariant = 'approved' | 'submitted' | 'draft' | 'returned' | 'completed' | 'on-track' | 'not-started';
 
 interface BadgeProps {
-  children: React.ReactNode;
-  variant: BadgeVariant;
+  variant?: BadgeVariant;
+  children: ReactNode;
   className?: string;
+  pulse?: boolean;
 }
 
-export const Badge = ({
-  children,
-  variant,
-  className = '',
-}: BadgeProps) => {
-  const variantStyles: Record<BadgeVariant, string> = {
-    approved: 'bg-green-100 text-green-700',
-    completed: 'bg-green-100 text-green-700',
-    submitted: 'bg-amber-100 text-amber-700',
-    draft: 'bg-gray-100 text-gray-600',
-    returned: 'bg-red-100 text-red-700',
-    'on-track': 'bg-teal-100 text-teal-700',
-    'not-started': 'bg-gray-100 text-gray-400',
-  };
+const variantStyles: Record<BadgeVariant, string> = {
+  approved:     'bg-[var(--n-status-approved-bg)] text-[var(--n-status-approved)]',
+  completed:    'bg-[var(--n-status-approved-bg)] text-[var(--n-status-approved)]',
+  'on-track':   'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400',
+  submitted:    'bg-[var(--n-status-submitted-bg)] text-[var(--n-status-submitted)]',
+  draft:        'bg-[var(--n-status-draft-bg)] text-[var(--n-status-draft)]',
+  returned:     'bg-[var(--n-status-returned-bg)] text-[var(--n-status-returned)]',
+  'not-started':'bg-[var(--n-status-draft-bg)] text-[var(--n-status-draft)]',
+};
 
+export const Badge = ({ variant = 'draft', children, className, pulse }: BadgeProps) => {
   return (
-    <span className={cn(
-      'inline-flex items-center px-3 py-1 rounded-[6px] text-[12px] font-medium uppercase tracking-wider',
-      variantStyles[variant],
-      className
-    )}>
+    <span
+      className={cn(
+        'inline-flex items-center px-2.5 py-0.5 rounded-[6px] text-[12px] font-medium capitalize select-none',
+        variantStyles[variant],
+        pulse && 'animate-pulse-subtle',
+        className
+      )}
+    >
       {children}
     </span>
   );

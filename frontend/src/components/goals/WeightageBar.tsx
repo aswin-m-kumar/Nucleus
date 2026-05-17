@@ -10,11 +10,10 @@ const WeightageBar = ({ goals }: WeightageBarProps) => {
   const total = computeTotalWeightage(goals);
 
   return (
-    <ProgressBar 
-      value={total} 
-      label="Total Weightage" 
-      variant="weightage" 
-      className="mt-4" 
+    <ProgressBar
+      value={total}
+      label="Total Weightage"
+      variant="weightage"
     />
   );
 };

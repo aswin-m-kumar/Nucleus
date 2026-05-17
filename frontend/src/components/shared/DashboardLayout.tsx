@@ -3,9 +3,9 @@ import Navbar from './Navbar';
 
 const DashboardLayout = () => {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[var(--n-bg)]">
       <Navbar />
-      <main>
+      <main className="animate-fade-in">
         <Outlet />
       </main>
     </div>

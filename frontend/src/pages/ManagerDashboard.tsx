@@ -4,14 +4,14 @@ import { updateGoal } from '../api/goals';
 import { getTeamCheckIns, addCheckIn } from '../api/progress';
 import type { GoalSheet, Goal, ProgressResponse, Quarter } from '../types';
 import GoalRow from '../components/goals/GoalRow';
-import { CheckCircle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, RotateCcw, ChevronDown, ChevronUp, Users, Loader2 } from 'lucide-react';
 import { computeScore } from '../utils/scoringUtils';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
-import { Alert } from '../components/ui/Alert';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const ManagerDashboard = () => {
   const [sheets, setSheets] = useState<GoalSheet[]>([]);
@@ -20,7 +20,7 @@ const ManagerDashboard = () => {
   const [expandedSheet, setExpandedSheet] = useState<string | null>(null);
   const [comment, setComment] = useState('');
   const [showCommentBox, setShowCommentBox] = useState<string | null>(null);
-  
+
   const [activeQuarter, setActiveQuarter] = useState<Quarter>('Q1');
   const [checkInComments, setCheckInComments] = useState<Record<string, string>>({});
   const [viewModes, setViewModes] = useState<Record<string, 'goals' | 'progress'>>({});
@@ -30,11 +30,11 @@ const ManagerDashboard = () => {
       setLoading(true);
       const [sheetsData, pData] = await Promise.all([
         getTeamSheets(),
-        getTeamCheckIns('me') // Backend will use token for manager_id
+        getTeamCheckIns('me')
       ]);
       setSheets(sheetsData);
       setProgressData(pData);
-      
+
       const initialViewModes: Record<string, 'goals' | 'progress'> = {};
       sheetsData.forEach(s => {
         initialViewModes[s.id] = s.status === 'approved' ? 'progress' : 'goals';
@@ -52,12 +52,8 @@ const ManagerDashboard = () => {
   }, []);
 
   const handleApprove = async (sheetId: string) => {
-    try {
-      await approveSheet(sheetId);
-      fetchData();
-    } catch (err) {
-      alert('Failed to approve');
-    }
+    try { await approveSheet(sheetId); fetchData(); }
+    catch { alert('Failed to approve'); }
   };
 
   const handleReturn = async (sheetId: string) => {
@@ -70,18 +66,12 @@ const ManagerDashboard = () => {
       setShowCommentBox(null);
       setComment('');
       fetchData();
-    } catch (err) {
-      alert('Failed to return');
-    }
+    } catch { alert('Failed to return'); }
   };
 
   const handleGoalUpdate = async (goalId: string, data: Partial<Goal>) => {
-    try {
-      await updateGoal(goalId, data);
-      fetchData();
-    } catch (err) {
-      alert('Failed to update goal');
-    }
+    try { await updateGoal(goalId, data); fetchData(); }
+    catch { alert('Failed to update goal'); }
   };
 
   const handleSaveCheckIn = async (goalId: string) => {
@@ -89,7 +79,6 @@ const ManagerDashboard = () => {
     if (!mgrComment) return;
     try {
       await addCheckIn(goalId, activeQuarter, mgrComment);
-      // Clear input and refresh
       setCheckInComments(prev => ({ ...prev, [goalId]: '' }));
       fetchData();
     } catch (err: any) {
@@ -97,164 +86,185 @@ const ManagerDashboard = () => {
     }
   };
 
-  if (loading) return <div className="p-10 text-center">Loading team goals...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 size={24} className="animate-spin text-[var(--n-primary)]" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-6">
-      <h1 className="text-3xl font-bold text-slate-900 mb-2">Team Overview</h1>
-      <p className="text-slate-500 mb-10">Review and manage goal sheets for your direct reports.</p>
+    <div className="max-w-5xl mx-auto py-8 px-6">
+      {/* Header */}
+      <header className="mb-8">
+        <h1 className="text-[28px] font-semibold text-[var(--n-text)] mb-1">Team Overview</h1>
+        <p className="text-[14px] text-[var(--n-text-tertiary)]">
+          Review and manage goal sheets for your direct reports.
+        </p>
+      </header>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {sheets.length === 0 ? (
-          <Card className="p-20 text-center">
-            <p className="text-slate-400">No team members have started their goal sheets yet.</p>
-          </Card>
+          <EmptyState
+            icon={<Users size={48} strokeWidth={1.5} />}
+            heading="No team submissions"
+            description="No team members have started their goal sheets yet."
+          />
         ) : (
           sheets.map(sheet => {
-            // Determine progress visual state
             const sheetGoals = sheet.goals;
             const sheetProgress = progressData.filter(p => sheetGoals.some(g => g.id === p.goal_id) && p.quarter === activeQuarter);
-            let progressColor = 'bg-slate-100'; // none
+
+            let statusDot = 'bg-[var(--n-bg-muted)]';
             if (sheet.status === 'approved' && sheetGoals.length > 0) {
-              if (sheetProgress.length === sheetGoals.length) {
-                progressColor = 'bg-[#1D9E75]'; // all updated
-              } else if (sheetProgress.length > 0) {
-                progressColor = 'bg-[#BA7517]'; // partial
-              } else {
-                progressColor = 'bg-red-500'; // none
-              }
+              if (sheetProgress.length === sheetGoals.length) statusDot = 'bg-[var(--n-status-approved)]';
+              else if (sheetProgress.length > 0) statusDot = 'bg-[var(--n-secondary)]';
+              else statusDot = 'bg-[var(--n-danger)]';
             }
 
+            const isExpanded = expandedSheet === sheet.id;
+
             return (
-              <Card key={sheet.id} className="overflow-hidden p-0 border-none shadow-sm bg-white">
-                <div 
-                  className="p-6 flex justify-between items-center cursor-pointer hover:bg-slate-50 transition-colors border border-slate-200 rounded-xl"
-                  onClick={() => setExpandedSheet(expandedSheet === sheet.id ? null : sheet.id)}
+              <Card key={sheet.id} className="p-0 overflow-hidden">
+                {/* Accordion Header */}
+                <button
+                  className="w-full flex items-center justify-between p-5 hover:bg-[var(--n-bg-subtle)] transition-colors text-left"
+                  onClick={() => setExpandedSheet(isExpanded ? null : sheet.id)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="relative h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-[#534AB7] font-bold">
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative h-9 w-9 rounded-full bg-[var(--n-accent-light)] flex items-center justify-center text-[var(--n-accent)] font-semibold text-[14px]">
                       {sheet.users?.name.charAt(0)}
                       {sheet.status === 'approved' && (
-                        <span className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${progressColor}`} title="Update Status"></span>
+                        <span className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--n-bg-card)] ${statusDot}`} />
                       )}
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900">{sheet.users?.name}</h3>
-                      <p className="text-xs text-slate-500">{sheet.users?.department}</p>
+                      <h3 className="text-[15px] font-medium text-[var(--n-text)]">{sheet.users?.name}</h3>
+                      <p className="text-[12px] text-[var(--n-text-tertiary)]">{sheet.users?.department} · {sheetGoals.length} goals</p>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-6">
-                    <Badge variant={
-                      sheet.status === 'approved' ? 'approved' : 
-                      sheet.status === 'submitted' ? 'submitted' : 
-                      sheet.status === 'returned' ? 'returned' : 'draft'
-                    }>
+                  <div className="flex items-center gap-4">
+                    <Badge
+                      variant={
+                        sheet.status === 'approved' ? 'approved' :
+                        sheet.status === 'submitted' ? 'submitted' :
+                        sheet.status === 'returned' ? 'returned' : 'draft'
+                      }
+                      pulse={sheet.status === 'submitted'}
+                    >
                       {sheet.status}
                     </Badge>
-                    {expandedSheet === sheet.id ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
+                    {isExpanded ? <ChevronUp size={18} className="text-[var(--n-text-tertiary)]" /> : <ChevronDown size={18} className="text-[var(--n-text-tertiary)]" />}
                   </div>
-                </div>
+                </button>
 
-                {expandedSheet === sheet.id && (
-                  <div className="p-6 border border-t-0 border-slate-200 rounded-b-xl bg-slate-50 -mt-2">
+                {/* Accordion Body */}
+                {isExpanded && (
+                  <div className="px-5 pb-5 border-t border-[var(--n-border)] animate-fade-in">
+                    {/* View Toggle for approved */}
                     {sheet.status === 'approved' && (
-                      <div className="flex border-b border-slate-200 mb-6 mt-2">
-                        <button 
-                          className={`py-2 px-6 font-medium text-sm ${viewModes[sheet.id] === 'goals' ? 'border-b-2 border-[#1D9E75] text-[#1D9E75]' : 'text-slate-500 hover:text-slate-800'}`}
+                      <div className="flex gap-1 bg-[var(--n-bg-subtle)] p-1 rounded-[var(--n-radius-sm)] w-fit mt-4 mb-5">
+                        <button
+                          className={`px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all ${
+                            viewModes[sheet.id] === 'goals'
+                              ? 'bg-[var(--n-bg-card)] text-[var(--n-text)] shadow-[var(--n-shadow-sm)]'
+                              : 'text-[var(--n-text-tertiary)]'
+                          }`}
                           onClick={() => setViewModes(prev => ({ ...prev, [sheet.id]: 'goals' }))}
                         >
-                          Goal Details
+                          Goals
                         </button>
-                        <button 
-                          className={`py-2 px-6 font-medium text-sm flex items-center gap-2 ${viewModes[sheet.id] === 'progress' ? 'border-b-2 border-[#1D9E75] text-[#1D9E75]' : 'text-slate-500 hover:text-slate-800'}`}
+                        <button
+                          className={`px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all ${
+                            viewModes[sheet.id] === 'progress'
+                              ? 'bg-[var(--n-bg-card)] text-[var(--n-text)] shadow-[var(--n-shadow-sm)]'
+                              : 'text-[var(--n-text-tertiary)]'
+                          }`}
                           onClick={() => setViewModes(prev => ({ ...prev, [sheet.id]: 'progress' }))}
                         >
-                          Quarterly Check-in
+                          Check-in
                         </button>
                       </div>
                     )}
 
+                    {/* Progress View */}
                     {viewModes[sheet.id] === 'progress' && sheet.status === 'approved' ? (
-                      <div className="space-y-6">
-                        <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                          <h4 className="font-bold text-slate-800">Check-in Context ({activeQuarter})</h4>
-                          <div className="flex gap-2">
-                            {(['Q1', 'Q2', 'Q3', 'Q4'] as Quarter[]).map((q) => (
-                              <button
-                                key={q}
-                                onClick={() => setActiveQuarter(q)}
-                                className={`px-3 py-1 rounded text-sm font-bold transition-colors ${
-                                  activeQuarter === q 
-                                    ? 'bg-[#1D9E75] text-white' 
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                              >
-                                {q}
-                              </button>
-                            ))}
-                          </div>
+                      <div className="space-y-4 mt-4">
+                        <div className="flex items-center gap-2">
+                          {(['Q1', 'Q2', 'Q3', 'Q4'] as Quarter[]).map((q) => (
+                            <button
+                              key={q}
+                              onClick={() => setActiveQuarter(q)}
+                              className={`px-3 py-1 rounded-[var(--n-radius-sm)] text-[13px] font-medium transition-all ${
+                                activeQuarter === q
+                                  ? 'bg-[var(--n-primary)] text-white'
+                                  : 'bg-[var(--n-bg-subtle)] text-[var(--n-text-secondary)] hover:bg-[var(--n-bg-muted)]'
+                              }`}
+                            >
+                              {q}
+                            </button>
+                          ))}
                         </div>
 
-                        <div className="overflow-x-auto bg-white rounded-lg border border-slate-200 shadow-sm">
+                        <div className="overflow-x-auto border border-[var(--n-border)] rounded-[var(--n-radius-md)]">
                           <table className="w-full text-left border-collapse">
                             <thead>
-                              <tr className="bg-slate-50 text-xs uppercase text-slate-500 border-b border-slate-200">
-                                <th className="p-4 font-semibold">Goal</th>
-                                <th className="p-4 font-semibold w-24">Target</th>
-                                <th className="p-4 font-semibold w-24">Actual</th>
-                                <th className="p-4 font-semibold w-20">Score</th>
-                                <th className="p-4 font-semibold">Manager Feedback</th>
+                              <tr className="bg-[var(--n-bg-subtle)]">
+                                <th className="px-4 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)]">Goal</th>
+                                <th className="px-4 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)] w-20">Target</th>
+                                <th className="px-4 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)] w-20">Actual</th>
+                                <th className="px-4 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)] w-16">Score</th>
+                                <th className="px-4 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)]">Feedback</th>
                               </tr>
                             </thead>
-                            <tbody className="text-sm">
+                            <tbody>
                               {sheet.goals.map(goal => {
                                 const p = progressData.find(pd => pd.goal_id === goal.id && pd.quarter === activeQuarter);
                                 const score = computeScore(goal.uom_type, goal.target, p?.actual);
                                 const hasProgress = p != null;
 
                                 return (
-                                  <tr key={goal.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                    <td className="p-4">
-                                      <p className="font-medium text-slate-900 line-clamp-2">{goal.title}</p>
-                                    </td>
-                                    <td className="p-4 text-slate-600">
+                                  <tr key={goal.id} className="border-b border-[var(--n-border)] last:border-b-0 hover:bg-[var(--n-bg-subtle)] transition-colors">
+                                    <td className="px-4 py-3 text-[14px] font-medium text-[var(--n-text)]">{goal.title}</td>
+                                    <td className="px-4 py-3 text-[13px] text-[var(--n-text-secondary)]">
                                       {goal.uom_type === 'timeline' ? new Date(Number(goal.target)).toLocaleDateString() : goal.target}
                                     </td>
-                                    <td className="p-4 font-bold text-slate-800">
-                                      {!hasProgress ? '-' : goal.uom_type === 'timeline' ? new Date(Number(p.actual)).toLocaleDateString() : p.actual}
+                                    <td className="px-4 py-3 text-[13px] font-semibold text-[var(--n-text)]">
+                                      {!hasProgress ? '—' : goal.uom_type === 'timeline' ? new Date(Number(p.actual)).toLocaleDateString() : p.actual}
                                     </td>
-                                    <td className="p-4">
-                                      {!hasProgress ? '-' : (
-                                        <span className={`font-bold ${score >= 100 ? 'text-[#1D9E75]' : score >= 50 ? 'text-[#BA7517]' : 'text-red-500'}`}>
+                                    <td className="px-4 py-3">
+                                      {!hasProgress ? '—' : (
+                                        <span className={`text-[13px] font-semibold ${
+                                          score >= 100 ? 'text-[var(--n-status-approved)]' :
+                                          score >= 50 ? 'text-[var(--n-secondary)]' :
+                                          'text-[var(--n-danger)]'
+                                        }`}>
                                           {score.toFixed(0)}%
                                         </span>
                                       )}
                                     </td>
-                                    <td className="p-4">
+                                    <td className="px-4 py-3">
                                       {!hasProgress ? (
-                                        <span className="text-xs text-[#BA7517]">Waiting for employee...</span>
+                                        <span className="text-[12px] text-[var(--n-secondary)]">Pending...</span>
                                       ) : (
-                                        <div className="flex flex-col gap-2">
-                                          {p.manager_comment ? (
-                                            <Alert type="info" className="py-2 px-3 text-xs">
+                                        <div className="space-y-2">
+                                          {p.manager_comment && (
+                                            <p className="text-[12px] text-[var(--n-text-secondary)] bg-[var(--n-bg-subtle)] px-2 py-1 rounded">
                                               {p.manager_comment}
-                                            </Alert>
-                                          ) : null}
-                                          <div className="flex gap-2 items-start">
-                                            <div className="flex-1">
-                                              <Input 
-                                                type="text" 
-                                                placeholder="Add feedback..."
-                                                value={checkInComments[goal.id] || ''}
-                                                onChange={(e) => setCheckInComments(prev => ({ ...prev, [goal.id]: e.target.value }))}
-                                              />
-                                            </div>
-                                            <Button 
+                                            </p>
+                                          )}
+                                          <div className="flex gap-2 items-center">
+                                            <Input
+                                              type="text"
+                                              placeholder="Add feedback..."
+                                              value={checkInComments[goal.id] || ''}
+                                              onChange={(e) => setCheckInComments(prev => ({ ...prev, [goal.id]: e.target.value }))}
+                                            />
+                                            <Button
                                               disabled={!checkInComments[goal.id]}
                                               onClick={() => handleSaveCheckIn(goal.id)}
-                                              variant="primary"
-                                              className="mt-0"
+                                              size="sm"
                                             >
                                               Save
                                             </Button>
@@ -270,11 +280,12 @@ const ManagerDashboard = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                      /* Goals View */
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                         {sheet.goals.map(goal => (
-                          <GoalRow 
-                            key={goal.id} 
-                            goal={goal} 
+                          <GoalRow
+                            key={goal.id}
+                            goal={goal}
                             readOnly={sheet.status === 'approved'}
                             onEdit={sheet.status === 'submitted' ? (g) => {
                               const newTarget = prompt('New Target:', g.target.toString());
@@ -285,47 +296,41 @@ const ManagerDashboard = () => {
                       </div>
                     )}
 
+                    {/* Approval Actions */}
                     {sheet.status === 'submitted' && (
-                      <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
+                      <div className="mt-5 pt-5 border-t border-[var(--n-border)]">
                         {showCommentBox === sheet.id ? (
-                          <div className="w-full flex flex-col gap-2">
-                            <Textarea 
+                          <div className="space-y-3">
+                            <Textarea
                               placeholder="Reason for return..."
                               value={comment}
                               onChange={(e) => setComment(e.target.value)}
                             />
-                            <div className="flex justify-end gap-2 mt-2">
-                              <Button 
-                                variant="secondary"
-                                onClick={() => setShowCommentBox(null)}
-                              >
+                            <div className="flex justify-end gap-2">
+                              <Button variant="secondary" size="sm" onClick={() => setShowCommentBox(null)}>
                                 Cancel
                               </Button>
-                              <Button 
-                                variant="danger"
-                                onClick={() => handleReturn(sheet.id)}
-                              >
+                              <Button variant="danger" size="sm" onClick={() => handleReturn(sheet.id)}>
                                 Confirm Return
                               </Button>
                             </div>
                           </div>
                         ) : (
-                          <>
-                            <Button 
+                          <div className="flex justify-end gap-2">
+                            <Button
                               variant="secondary"
+                              size="sm"
                               onClick={() => setShowCommentBox(sheet.id)}
-                              className="text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-2"
                             >
-                              <RotateCcw size={16} /> Return for Rework
+                              <RotateCcw size={14} /> Return
                             </Button>
-                            <Button 
-                              variant="primary"
+                            <Button
+                              size="sm"
                               onClick={() => handleApprove(sheet.id)}
-                              className="flex items-center gap-2"
                             >
-                              <CheckCircle size={16} /> Approve Sheet
+                              <CheckCircle size={14} /> Approve
                             </Button>
-                          </>
+                          </div>
                         )}
                       </div>
                     )}

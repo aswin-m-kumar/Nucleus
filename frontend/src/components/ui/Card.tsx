@@ -1,24 +1,21 @@
-import React from 'react';
+import type { ReactNode, HTMLAttributes } from 'react';
 import { cn } from '../../utils/tailwind';
 
-interface CardProps {
-  children: React.ReactNode;
-  variant?: 'default' | 'metric';
-  className?: string;
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  hover?: boolean;
 }
 
-export const Card = ({
-  children,
-  variant = 'default',
-  className = '',
-}: CardProps) => {
-  const variants = {
-    default: 'bg-white border border-gray-200 rounded-[12px] p-5 shadow-sm',
-    metric: 'bg-[#f4f6f8] rounded-[12px] p-4',
-  };
-
+export const Card = ({ children, hover = false, className, ...props }: CardProps) => {
   return (
-    <div className={cn(variants[variant], className)}>
+    <div
+      className={cn(
+        'bg-[var(--n-bg-card)] border border-[var(--n-border)] rounded-[var(--n-radius-md)] p-5 transition-all duration-[var(--n-transition)]',
+        hover && 'hover:border-[var(--n-border-hover)] cursor-pointer',
+        className
+      )}
+      {...props}
+    >
       {children}
     </div>
   );

@@ -7,6 +7,7 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Alert } from '../ui/Alert';
+import { Badge } from '../ui/Badge';
 
 interface ProgressRowProps {
   goal: Goal;
@@ -43,42 +44,48 @@ const ProgressRow = ({ goal, quarter, initialProgress, isEditable, onSaved }: Pr
     }
   };
 
-  const isChanged = 
+  const isChanged =
     actual !== (initialProgress?.actual?.toString() || '') ||
     status !== (initialProgress?.status || 'not_started');
 
   return (
-    <Card className="mb-4 !p-4">
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-semibold text-slate-900">{goal.title}</h4>
-        <span className="px-2 py-0.5 bg-slate-100 text-[10px] font-bold text-slate-600 rounded uppercase">
-          {goal.thrust_area}
-        </span>
+    <Card className="animate-fade-in">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="text-[15px] font-medium text-[var(--n-text)]">{goal.title}</h4>
+        <Badge variant="draft">{goal.thrust_area}</Badge>
       </div>
-      
-      <div className="flex items-center gap-4 text-xs font-medium mb-4">
+
+      <div className="flex items-center gap-6 text-[13px] mb-4">
         <div className="flex flex-col">
-          <span className="text-slate-400 uppercase tracking-tighter">Target ({goal.uom_type})</span>
-          <span className="text-slate-700">
-            {goal.uom_type === 'timeline' 
+          <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)]">
+            Target ({goal.uom_type})
+          </span>
+          <span className="text-[var(--n-text)] font-medium">
+            {goal.uom_type === 'timeline'
               ? new Date(Number(goal.target)).toLocaleDateString()
-              : goal.target} 
+              : goal.target}
           </span>
         </div>
         <div className="flex flex-col">
-          <span className="text-slate-400 uppercase tracking-tighter">Computed Score</span>
-          <span className={`font-bold ${score >= 100 ? 'text-[#1D9E75]' : score >= 50 ? 'text-[#BA7517]' : 'text-red-500'}`}>
+          <span className="text-[11px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)]">
+            Score
+          </span>
+          <span className={`font-semibold ${
+            score >= 100 ? 'text-[var(--n-status-approved)]' :
+            score >= 50 ? 'text-[var(--n-secondary)]' :
+            'text-[var(--n-danger)]'
+          }`}>
             {score.toFixed(1)}%
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 items-end">
+      <div className="grid grid-cols-3 gap-3 items-end">
         <div>
           {goal.uom_type === 'timeline' ? (
-            <Input 
+            <Input
               label="Actual"
-              type="date" 
+              type="date"
               disabled={!isEditable}
               value={actual ? new Date(Number(actual)).toISOString().split('T')[0] : ''}
               onChange={(e) => {
@@ -86,8 +93,8 @@ const ProgressRow = ({ goal, quarter, initialProgress, isEditable, onSaved }: Pr
                 setActual(dateVal);
               }}
             />
-          ) : goal.uom_type === 'zero' ? (
-            <Input 
+          ) : (
+            <Input
               label="Actual"
               type="number"
               disabled={!isEditable}
@@ -95,18 +102,10 @@ const ProgressRow = ({ goal, quarter, initialProgress, isEditable, onSaved }: Pr
               onChange={(e) => setActual(e.target.value)}
               placeholder="0"
             />
-          ) : (
-             <Input 
-              label="Actual"
-              type="number" 
-              disabled={!isEditable}
-              value={actual}
-              onChange={(e) => setActual(e.target.value)}
-            />
           )}
         </div>
         <div>
-          <Select 
+          <Select
             label="Status"
             disabled={!isEditable}
             value={status}
@@ -119,22 +118,23 @@ const ProgressRow = ({ goal, quarter, initialProgress, isEditable, onSaved }: Pr
           />
         </div>
         <div>
-          <Button 
+          <Button
             disabled={!isEditable || !isChanged || saving}
+            loading={saving}
             onClick={handleSave}
             className="w-full"
           >
-            {saving ? 'Saving...' : 'Save Actual'}
+            Save
           </Button>
         </div>
       </div>
-      
-      {error && <Alert type="error" className="mt-4" onClose={() => setError(null)}>{error}</Alert>}
+
+      {error && <Alert type="error" className="mt-3" onClose={() => setError(null)}>{error}</Alert>}
 
       {initialProgress?.manager_comment && (
-        <Alert type="info" className="mt-4">
-          <span className="font-bold block mb-1">Manager Feedback:</span>
-          {initialProgress.manager_comment}
+        <Alert type="info" className="mt-3">
+          <span className="font-semibold block mb-0.5 text-[13px]">Manager Feedback</span>
+          <span className="text-[13px]">{initialProgress.manager_comment}</span>
         </Alert>
       )}
     </Card>

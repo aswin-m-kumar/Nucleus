@@ -4,18 +4,22 @@ import { getActiveCycle } from '../api/cycles';
 import { addGoal, updateGoal, deleteGoal } from '../api/goals';
 import { getSheetAchievements } from '../api/progress';
 import type { GoalSheet, Goal, ProgressResponse, Quarter } from '../types';
+import { useAuthStore } from '../store/authStore';
 import GoalRow from '../components/goals/GoalRow';
 import GoalForm from '../components/goals/GoalForm';
 import WeightageBar from '../components/goals/WeightageBar';
 import ProgressRow from '../components/goals/ProgressRow';
 import { computeTotalWeightage, isValidWeightage } from '../utils/weightageUtils';
-import { Plus, Send, RefreshCw } from 'lucide-react';
+import { Plus, Send, Target, BarChart3, FileText, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
-import { Alert as AlertComponent } from '../components/ui/Alert';
+import { MetricCard } from '../components/ui/MetricCard';
+import { Alert } from '../components/ui/Alert';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const EmployeeDashboard = () => {
+  const user = useAuthStore((state) => state.user);
   const [sheet, setSheet] = useState<GoalSheet | null>(null);
   const [progressData, setProgressData] = useState<ProgressResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +27,7 @@ const EmployeeDashboard = () => {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creatingSheet, setCreatingSheet] = useState(false);
-  
+
   const [activeQuarter, setActiveQuarter] = useState<Quarter>('Q1');
   const [viewMode, setViewMode] = useState<'goals' | 'progress'>('goals');
 
@@ -122,63 +126,115 @@ const EmployeeDashboard = () => {
   const currentMonth = new Date().getMonth();
   const currentQuarter: Quarter = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen">Loading your goals...</div>;
+  // Greeting based on time
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 size={24} className="animate-spin text-[var(--n-primary)]" />
+      </div>
+    );
+  }
 
   const totalWeightage = sheet ? computeTotalWeightage(sheet.goals) : 0;
   const canSubmit = sheet && isValidWeightage(totalWeightage) && sheet.goals.length > 0 && (sheet.status === 'draft' || sheet.status === 'returned');
   const isLocked = sheet?.status === 'submitted' || sheet?.status === 'approved';
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-6">
-      <header className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">My Goals</h1>
-          <p className="text-slate-500">Cycle: {sheet?.cycle_id || 'Active Period'}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant={
-            sheet?.status === 'approved' ? 'approved' : 
-            sheet?.status === 'submitted' ? 'submitted' : 
-            sheet?.status === 'returned' ? 'returned' : 'draft'
-          }>
-            {sheet?.status || 'No Sheet'}
-          </Badge>
-          {canSubmit && (
-            <Button onClick={handleSubmitSheet} className="flex items-center gap-2">
-              <Send size={16} /> Submit for Approval
-            </Button>
-          )}
+    <div className="max-w-5xl mx-auto py-8 px-6">
+      {/* Header */}
+      <header className="mb-8">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-[28px] font-semibold text-[var(--n-text)] mb-1">
+              {greeting}, {user?.name?.split(' ')[0]}
+            </h1>
+            <p className="text-[14px] text-[var(--n-text-tertiary)]">
+              Cycle: {sheet?.cycle_id || 'Active Period'}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge
+              variant={
+                sheet?.status === 'approved' ? 'approved' :
+                sheet?.status === 'submitted' ? 'submitted' :
+                sheet?.status === 'returned' ? 'returned' : 'draft'
+              }
+              pulse={sheet?.status === 'submitted'}
+            >
+              {sheet?.status || 'No Sheet'}
+            </Badge>
+            {canSubmit && (
+              <Button onClick={handleSubmitSheet} size="sm">
+                <Send size={14} /> Submit for Review
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
       {error && (
-        <AlertComponent type="error" onClose={() => setError(null)} className="mb-6">
+        <Alert type="error" onClose={() => setError(null)} className="mb-6">
           {error}
-        </AlertComponent>
+        </Alert>
       )}
 
       {sheet ? (
         <div className="space-y-6">
-          <Card className="bg-slate-50 border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-slate-800">Weightage Summary</h3>
-              <span className={`text-sm font-bold ${isValidWeightage(totalWeightage) ? 'text-green-600' : 'text-red-600'}`}>
+          {/* Metric Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <MetricCard
+              label="Goals Created"
+              value={`${sheet.goals.length}`}
+              unit="/ 8"
+              icon={<Target size={18} />}
+            />
+            <MetricCard
+              label="Weightage"
+              value={`${totalWeightage}%`}
+              icon={<BarChart3 size={18} />}
+              variant={isValidWeightage(totalWeightage) ? 'primary' : 'secondary'}
+            />
+            <MetricCard
+              label="Sheet Status"
+              value={sheet.status}
+              icon={<FileText size={18} />}
+              variant="accent"
+            />
+          </div>
+
+          {/* Weightage Bar */}
+          <Card>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-[15px] font-medium text-[var(--n-text)]">Weightage Summary</h3>
+              <span className={`text-[13px] font-semibold ${isValidWeightage(totalWeightage) ? 'text-[var(--n-status-approved)]' : 'text-[var(--n-danger)]'}`}>
                 {totalWeightage}% / 100%
               </span>
             </div>
             <WeightageBar goals={sheet.goals} />
           </Card>
 
+          {/* View Toggle (for approved sheets) */}
           {sheet.status === 'approved' && (
-            <div className="flex border-b border-slate-200 mb-6">
-              <button 
-                className={`py-3 px-6 font-medium text-sm ${viewMode === 'goals' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+            <div className="flex gap-1 bg-[var(--n-bg-subtle)] p-1 rounded-[var(--n-radius-sm)] w-fit">
+              <button
+                className={`px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all duration-[var(--n-transition)] ${
+                  viewMode === 'goals'
+                    ? 'bg-[var(--n-bg-card)] text-[var(--n-text)] shadow-[var(--n-shadow-sm)]'
+                    : 'text-[var(--n-text-tertiary)] hover:text-[var(--n-text-secondary)]'
+                }`}
                 onClick={() => setViewMode('goals')}
               >
-                Goal Details
+                Goals
               </button>
-              <button 
-                className={`py-3 px-6 font-medium text-sm ${viewMode === 'progress' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+              <button
+                className={`px-4 py-1.5 rounded-[6px] text-[13px] font-medium transition-all duration-[var(--n-transition)] ${
+                  viewMode === 'progress'
+                    ? 'bg-[var(--n-bg-card)] text-[var(--n-text)] shadow-[var(--n-shadow-sm)]'
+                    : 'text-[var(--n-text-tertiary)] hover:text-[var(--n-text-secondary)]'
+                }`}
                 onClick={() => setViewMode('progress')}
               >
                 Track Progress
@@ -186,42 +242,42 @@ const EmployeeDashboard = () => {
             </div>
           )}
 
+          {/* Progress View */}
           {viewMode === 'progress' && sheet.status === 'approved' ? (
-            <Card className="bg-slate-50 border border-slate-200">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-slate-800">Quarterly Check-ins</h3>
-                <div className="flex gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                  {(['Q1', 'Q2', 'Q3', 'Q4'] as Quarter[]).map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => setActiveQuarter(q)}
-                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${
-                        activeQuarter === q 
-                          ? 'bg-[#1D9E75] text-white' 
-                          : q === currentQuarter 
-                          ? 'text-[#1D9E75] bg-teal-50 border border-teal-200' 
-                          : 'text-slate-600 hover:bg-slate-100'
-                      }`}
-                      title={q === currentQuarter ? "Current Active Quarter" : ""}
-                    >
-                      {q} {q === currentQuarter && '📍'}
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-4">
+              {/* Quarter Selector */}
+              <div className="flex items-center gap-2">
+                {(['Q1', 'Q2', 'Q3', 'Q4'] as Quarter[]).map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => setActiveQuarter(q)}
+                    className={`px-4 py-1.5 rounded-[var(--n-radius-sm)] text-[13px] font-medium transition-all duration-[var(--n-transition)] ${
+                      activeQuarter === q
+                        ? 'bg-[var(--n-primary)] text-white'
+                        : q === currentQuarter
+                          ? 'bg-[var(--n-primary-light)] text-[var(--n-primary)] border border-[var(--n-primary)] border-opacity-20'
+                          : 'bg-[var(--n-bg-subtle)] text-[var(--n-text-secondary)] hover:bg-[var(--n-bg-muted)]'
+                    }`}
+                    title={q === currentQuarter ? 'Current quarter' : ''}
+                  >
+                    {q} {q === currentQuarter && '•'}
+                  </button>
+                ))}
               </div>
-              
+
+              {activeQuarter !== currentQuarter && (
+                <Alert type="warning">
+                  Progress can only be updated during the active calendar quarter ({currentQuarter}).
+                </Alert>
+              )}
+
               <div className="space-y-4">
-                {activeQuarter !== currentQuarter && (
-                  <AlertComponent type="warning">
-                    Progress can only be updated during the active calendar quarter ({currentQuarter}).
-                  </AlertComponent>
-                )}
                 {sheet.goals.map(goal => {
                   const p = progressData.find(pd => pd.goal_id === goal.id && pd.quarter === activeQuarter);
                   return (
-                    <ProgressRow 
-                      key={goal.id} 
-                      goal={goal} 
+                    <ProgressRow
+                      key={goal.id}
+                      goal={goal}
                       quarter={activeQuarter}
                       initialProgress={p}
                       isEditable={activeQuarter === currentQuarter}
@@ -230,59 +286,67 @@ const EmployeeDashboard = () => {
                   );
                 })}
               </div>
-            </Card>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sheet.goals.map(goal => (
-                editingGoal?.id === goal.id ? (
-                  <div className="col-span-1 md:col-span-2" key={goal.id}>
-                    <GoalForm 
-                      initialData={goal} 
-                      onSubmit={handleUpdateGoal} 
-                      onCancel={() => setEditingGoal(null)} 
+            /* Goals View */
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-[18px] font-semibold text-[var(--n-text)]">My Goals</h2>
+                {!isLocked && sheet.goals.length < 8 && (
+                  <Button size="sm" onClick={() => setIsAdding(true)}>
+                    <Plus size={14} /> Add Goal
+                  </Button>
+                )}
+              </div>
+
+              {sheet.goals.length === 0 ? (
+                <EmptyState
+                  heading="No goals added yet"
+                  description="Start by clicking Add Goal to create your first performance goal."
+                  action={!isLocked ? { label: 'Add Goal', onClick: () => setIsAdding(true) } : undefined}
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {sheet.goals.map(goal => (
+                    <GoalRow
+                      key={goal.id}
+                      goal={goal}
+                      onEdit={isLocked ? undefined : setEditingGoal}
+                      onDelete={isLocked ? undefined : handleDeleteGoal}
+                      readOnly={isLocked}
                     />
-                  </div>
-                ) : (
-                  <GoalRow 
-                    key={goal.id} 
-                    goal={goal} 
-                    onEdit={isLocked ? undefined : setEditingGoal}
-                    onDelete={isLocked ? undefined : handleDeleteGoal}
-                    readOnly={isLocked}
-                  />
-                )
-              ))}
-              
-              {!isLocked && !isAdding && sheet.goals.length < 8 && (
-                <button 
-                  onClick={() => setIsAdding(true)}
-                  className="col-span-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-[#1D9E75] hover:text-[#1D9E75] hover:bg-teal-50 transition-all"
-                >
-                  <Plus size={32} className="mb-2" />
-                  <span className="font-medium">Add New Goal</span>
-                </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
 
-          {isAdding && viewMode === 'goals' && (
-            <GoalForm 
-              onSubmit={handleAddGoal} 
-              onCancel={() => setIsAdding(false)} 
+          {/* SlideOver forms */}
+          {isAdding && (
+            <GoalForm
+              onSubmit={handleAddGoal}
+              onCancel={() => setIsAdding(false)}
+            />
+          )}
+
+          {editingGoal && (
+            <GoalForm
+              initialData={editingGoal}
+              onSubmit={handleUpdateGoal}
+              onCancel={() => setEditingGoal(null)}
             />
           )}
         </div>
       ) : (
-        <Card className="text-center py-20 border-slate-200">
-          <RefreshCw size={48} className="mx-auto text-slate-300 mb-4 animate-spin-slow" />
-          <h3 className="text-xl font-bold text-slate-800 mb-2">No active goal sheet</h3>
-          <p className="text-slate-500 mb-6">Create a new sheet to start tracking your goals for this cycle.</p>
-          <Button 
-            onClick={handleCreateSheet}
-            disabled={creatingSheet}
-          >
-            {creatingSheet ? 'Creating...' : 'Create Goal Sheet'}
-          </Button>
+        <Card className="text-center py-16">
+          <EmptyState
+            heading="No active goal sheet"
+            description="Create a new sheet to start tracking your goals for this cycle."
+            action={{
+              label: creatingSheet ? 'Creating...' : 'Create Goal Sheet',
+              onClick: handleCreateSheet,
+            }}
+          />
         </Card>
       )}
     </div>

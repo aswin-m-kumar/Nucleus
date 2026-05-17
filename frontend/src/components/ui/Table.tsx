@@ -3,6 +3,7 @@ import { cn } from '../../utils/tailwind';
 interface Column<T> {
   key: keyof T;
   header: string;
+  className?: string;
 }
 
 interface TableProps<T> {
@@ -16,47 +17,57 @@ export const Table = <T extends Record<string, any>>({
   columns,
   data,
   onRowClick,
-  className = '',
+  className,
 }: TableProps<T>) => {
   return (
-    <div className={cn('w-full overflow-x-auto rounded-xl border border-gray-100', className)}>
-      <table className="w-full text-left border-collapse min-w-[500px] md:min-w-full">
-        <thead className="bg-gray-50">
-          <tr>
+    <div className={cn('w-full overflow-x-auto rounded-[var(--n-radius-md)] border border-[var(--n-border)]', className)}>
+      <table className="w-full text-left border-collapse">
+        <thead>
+          <tr className="bg-[var(--n-bg-subtle)]">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className="px-4 py-3 text-[12px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100"
+                className={cn(
+                  'px-5 py-3 text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)] border-b border-[var(--n-border)]',
+                  col.className
+                )}
               >
                 {col.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white">
-          {data.map((row, idx) => (
-            <tr
-              key={idx}
-              onClick={() => onRowClick?.(row)}
-              className={cn(
-                'border-b border-gray-50 last:border-0 transition-colors',
-                onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''
-              )}
-            >
-              {columns.map((col) => (
-                <td key={String(col.key)} className="px-4 py-3 text-sm text-gray-700">
-                  {row[col.key]}
-                </td>
-              ))}
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td
+                colSpan={columns.length}
+                className="px-5 py-12 text-center text-[var(--n-text-tertiary)] text-[14px]"
+              >
+                No data available
+              </td>
             </tr>
-          ))}
+          ) : (
+            data.map((row, idx) => (
+              <tr
+                key={idx}
+                onClick={() => onRowClick?.(row)}
+                className={cn(
+                  'h-12 border-b border-[var(--n-border)] last:border-b-0 transition-colors text-[14px]',
+                  'hover:bg-[var(--n-bg-subtle)]',
+                  onRowClick && 'cursor-pointer'
+                )}
+              >
+                {columns.map((col) => (
+                  <td key={String(col.key)} className={cn('px-5 py-3', col.className)}>
+                    {row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
-
-      {/* Mobile-only list view (< 768px) handled via parent container and overflow or separate component if needed */}
-      <div className="md:hidden">
-        {/* Note: In a real app, you might swap the table for a list of cards here */}
-      </div>
     </div>
   );
 };

@@ -1,40 +1,48 @@
-import React from 'react';
+import { forwardRef } from 'react';
+import type { InputHTMLAttributes } from 'react';
 import { cn } from '../../utils/tailwind';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
 }
 
-export const Input = ({
-  label,
-  error,
-  disabled,
-  className = '',
-  ...props
-}: InputProps) => {
-  return (
-    <div className="flex flex-col gap-1 w-full">
-      {label && (
-        <label className="text-[12px] font-medium text-gray-500">
-          {label}
-        </label>
-      )}
-      <input
-        disabled={disabled}
-        className={cn(
-          'h-9 w-full px-3 rounded-lg border border-gray-300 text-sm transition-all placeholder:text-gray-400 focus:ring-2 focus:ring-[#1D9E75] focus:border-transparent focus:outline-none',
-          error ? 'border-red-500 focus:ring-red-500' : '',
-          disabled ? 'bg-gray-50 cursor-not-allowed text-gray-400' : 'bg-white',
-          className
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, disabled, className, id, ...props }, ref) => {
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+
+    return (
+      <div className="flex flex-col gap-1.5 w-full">
+        {label && (
+          <label
+            htmlFor={inputId}
+            className="text-[12px] font-medium uppercase tracking-[0.5px] text-[var(--n-text-tertiary)]"
+          >
+            {label}
+          </label>
         )}
-        {...props}
-      />
-      {error && (
-        <span className="text-[10px] text-red-500 font-medium">
-          {error}
-        </span>
-      )}
-    </div>
-  );
-};
+        <input
+          ref={ref}
+          id={inputId}
+          disabled={disabled}
+          className={cn(
+            'h-9 w-full px-3 rounded-[var(--n-radius-sm)] border text-[14px] transition-all duration-[var(--n-transition)]',
+            'bg-[var(--n-bg-card)] text-[var(--n-text)] placeholder:text-[var(--n-text-tertiary)]',
+            'focus:outline-none focus:ring-2 focus:ring-[var(--n-primary)] focus:border-transparent',
+            error
+              ? 'border-[var(--n-danger)] focus:ring-[var(--n-danger)]'
+              : 'border-[var(--n-border)] hover:border-[var(--n-border-hover)]',
+            disabled && 'opacity-50 cursor-not-allowed bg-[var(--n-bg-subtle)]',
+            className
+          )}
+          {...props}
+        />
+        {error && (
+          <p className="text-[12px] text-[var(--n-danger)] mt-0.5">{error}</p>
+        )}
+      </div>
+    );
+  }
+);
+
+Input.displayName = 'Input';
