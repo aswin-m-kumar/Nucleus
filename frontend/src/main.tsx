@@ -33,7 +33,7 @@ class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean,
 }
 
 window.addEventListener('error', (e) => {
-  document.body.innerHTML = `<div style="padding: 20px; color: red; font-family: monospace;"><h1>Global Error:</h1><pre>${e.error?.stack || e.message}</pre></div>`;
+  console.error('Global Error:', e.error?.stack || e.message);
 });
 
 createRoot(document.getElementById('root')!).render(
