@@ -1,68 +1,93 @@
-# AtomQuest Goal Setting & Tracking Portal (Phase 1)
+# Nucleus — Goal Setting & Performance Tracking Portal
 
-This project is a modular Goal Setting and Tracking Portal built with FastAPI and React.
+> **Core of the organization, everything revolves around it.**
 
-## Structure
-- `/backend`: FastAPI service with business logic, validation, and audit logging.
-- `/frontend`: React + Vite + Tailwind + shadcn/ui.
+Built for **AtomQuest 1.0 Hackathon** by **Atomberg Technologies**.
 
-## Setup Instructions
+## 🌐 Live Demo & Deployments
+*   **App UI**: [https://nucleus-phi.vercel.app](https://nucleus-phi.vercel.app)
+*   **Backend Server**: [https://nucleus-d8st.onrender.com](https://nucleus-d8st.onrender.com)
 
-### Prerequisites
-- Python 3.9+
-- Node.js 18+
-- Supabase Project
+---
 
-### Database Setup
-1. Go to your Supabase Project -> SQL Editor.
-2. Copy the contents of `supabase_schema.sql` (found in the root) and run it.
+## 🔑 Demo Sandbox Credentials
+The default password for all sandbox accounts is **`Demo@1234`**.
 
-### Backend Setup
-1. Navigate to `/backend`.
-2. Create a `.env` file from the template:
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   SUPABASE_JWT_SECRET=your_supabase_jwt_secret
-   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-   CORS_ORIGINS=http://localhost:5173
-   ```
-3. Install dependencies: `pip install -r requirements.txt`
-4. Run the server: `python main.py`
+| Role | Name | Email | Department |
+| :--- | :--- | :--- | :--- |
+| **Admin** | Priya Nair | `hr@nucleusdemo.com` | HR |
+| **Manager** | Rahul Menon | `mgr.engineering@nucleusdemo.com` | Engineering |
+| **Manager** | Sneha Pillai | `mgr.sales@nucleusdemo.com` | Sales |
+| **Employee** | Arjun Kumar | `emp1@nucleusdemo.com` | Engineering |
+| **Employee** | Divya Raj | `emp2@nucleusdemo.com` | Engineering |
+| **Employee** | Kiran Das | `emp3@nucleusdemo.com` | Sales |
+| **Employee** | Meera Nambiar | `emp4@nucleusdemo.com` | Sales |
 
-### Frontend Setup
-1. Navigate to `/frontend`.
-2. Create a `.env` file:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_API_URL=http://localhost:8000
-   ```
-3. Install dependencies: `npm install`
-4. Run the app: `npm run dev`
+---
 
-### Seed Data
-1. Manually create the following users in Supabase Auth:
-   - admin@atomquest.com
-   - manager1@atomquest.com
-   - manager2@atomquest.com
-   - employee1@atomquest.com
-   - employee2@atomquest.com
-   - employee3@atomquest.com
-   - employee4@atomquest.com
-2. Get their UUIDs from Supabase and insert them into the `public.users` table with correct roles.
-3. Run `python seed.py` in the `/backend` directory to create the active cycle.
+## 🛠️ Stack & Architecture
+*   **Frontend**: React 19 + Vite + Tailwind CSS v4 + TypeScript
+*   **Backend**: FastAPI (Python 3.9+) + Pydantic
+*   **Database & Auth**: Supabase (PostgreSQL + Gotrue Auth + Row-Level Security)
+*   **Hosting**: Vercel (Frontend) + Render (Backend)
 
-## Role Credentials (Example)
-- **Admin**: admin@atomquest.com / password
-- **Manager**: manager1@atomquest.com / password
-- **Employee**: employee1@atomquest.com / password
+---
 
-## Phase 1 Features
-- [x] JWT Auth with Supabase
-- [x] Goal Sheet creation for active cycles
-- [x] 100% weightage validation on submission
-- [x] Manager approval/return workflow
-- [x] Admin-pushed shared KPIs
-- [x] Immutable goals after approval
-- [x] Organization-wide Audit Logging
+## ✨ Features Built (Phase 1 & Phase 2)
+
+*   **Role-Based Access Control**: Tailored portals with dedicated UI views for employees, line managers, and platform administrators.
+*   **Rigorous Weightage Validation**: Dynamic tracking that guarantees that goal sets must sum to **exactly 100%** before submission.
+*   **Audit Trails**: Organization-wide immutable logs capturing all action operators, old/new states, timestamps, and database rows.
+*   **Quarterly Progress Logging**: Track progress logs across **Q1–Q4** with status trackers (`not_started`, `on_track`, `completed`) and inline manager reviews.
+*   **Dynamic UI Engine**: Stark minimalist design system with dark-mode HSL colors, responsive tables, interactive slide-over panels, and custom-animated Atom Orbit SVG icons.
+*   **Cycle & Admin Controls**: Create and activate review windows, push shared corporate goals to selected employees, and initiate emergency unlocking for locked goal sheets.
+
+---
+
+## 🧮 UoM Metric Scoring System
+The scoring logic operates identically on both the TypeScript frontend (`scoringUtils.ts`) and Python backend (`scoring_service.py`), ensuring consistent and safe score caps:
+
+1.  **Min (Higher is better)**:
+    $$\text{Score} = \text{Min}\left(\frac{\text{Actual}}{\text{Target}} \times 100,\ 100\right)$$
+2.  **Max (Lower is better)**:
+    $$\text{Score} = \text{Min}\left(\frac{\text{Target}}{\text{Actual}} \times 100,\ 100\right)$$
+3.  **Timeline (Deliver by date)**:
+    $$\text{Score} = 100\% \text{ if } \text{Actual} \le \text{Target (timestamp)} \text{ else } 0\%$$
+4.  **Zero Tolerance (Avoidance)**:
+    $$\text{Score} = 100\% \text{ if } \text{Actual} == 0 \text{ else } 0\%$$
+
+---
+
+## ⚡ Setup & Launch Instructions
+
+### 1. Repository Configuration
+Copy the default environments in both directories:
+*   In `/backend`, configure `.env` with Supabase URLs and Keys.
+*   In `/frontend`, configure `.env` with `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `VITE_API_URL`.
+
+### 2. Auto-Provisioning Sandbox
+We have created an automated admin seeding utility that completely bypasses Supabase API public signup rate limits and automatically builds employee-manager chains with simulated state logs.
+
+```bash
+cd backend
+pip install -r requirements.txt
+python seed_demo.py
+```
+
+*If manager assignments ever get corrupted by manual DB operations, simply execute our quick recovery diagnostic:*
+```bash
+python fix_managers.py
+```
+
+### 3. Start Services
+*   **Backend FastAPI**:
+    ```bash
+    cd backend
+    uvicorn main:app --reload
+    ```
+*   **Frontend React App**:
+    ```bash
+    cd frontend
+    npm install
+    npm run dev
+    ```
