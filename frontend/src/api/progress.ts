@@ -21,7 +21,7 @@ export const addCheckIn = async (goalId: string, quarter: string, comment: strin
   return response.data;
 };
 
-export const getTeamCheckIns = async (managerId: string) => {
-  const response = await apiClient.get<ProgressResponse[]>(`/checkins/team/${managerId}`);
+export const getTeamCheckIns = async () => {
+  const response = await apiClient.get<ProgressResponse[]>(`/checkins/team`);
   return response.data;
 };

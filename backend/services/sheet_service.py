@@ -55,15 +55,18 @@ class SheetService:
 
     @staticmethod
     def get_team_sheets(manager_id: str):
-        # Get employees under this manager
-        employees = supabase.table("users").select("id").eq("manager_id", manager_id).execute()
-        employee_ids = [e["id"] for e in employees.data]
-        
-        if not employee_ids:
-            return []
-            
-        response = supabase.table("goal_sheets").select("*, goals(*), users!inner(name, email, department)").in_("employee_id", employee_ids).execute()
-        return response.data
+        try:
+            # Get employees under this manager
+            employees = supabase.table("users").select("id").eq("manager_id", manager_id).execute()
+            employee_ids = [e["id"] for e in employees.data]
+
+            if not employee_ids:
+                return []
+
+            response = supabase.table("goal_sheets").select("*, goals(*), users!inner(name, email, department)").in_("employee_id", employee_ids).execute()
+            return response.data
+        except Exception as e:
+            raise Exception({"error": str(e), "code": "TEAM_SHEETS_FETCH_ERROR"})
 
     @staticmethod
     def approve_sheet(sheet_id: str, manager_id: str):

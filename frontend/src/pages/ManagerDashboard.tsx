@@ -30,7 +30,7 @@ const ManagerDashboard = () => {
       setLoading(true);
       const [sheetsData, pData] = await Promise.all([
         getTeamSheets(),
-        getTeamCheckIns('me')
+        getTeamCheckIns()
       ]);
       setSheets(sheetsData);
       setProgressData(pData);

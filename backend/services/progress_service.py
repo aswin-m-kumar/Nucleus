@@ -57,14 +57,17 @@ class ProgressService:
 
     @staticmethod
     def get_sheet_achievements(sheet_id: str):
-        # Join goals and quarterly_progress
-        goals_res = supabase.table("goals").select("id").eq("sheet_id", sheet_id).execute()
-        if not goals_res.data:
-            return []
-        
-        goal_ids = [g["id"] for g in goals_res.data]
-        prog_res = supabase.table("quarterly_progress").select("*").in_("goal_id", goal_ids).execute()
-        return prog_res.data
+        try:
+            # Join goals and quarterly_progress
+            goals_res = supabase.table("goals").select("id").eq("sheet_id", sheet_id).execute()
+            if not goals_res.data:
+                return []
+
+            goal_ids = [g["id"] for g in goals_res.data]
+            prog_res = supabase.table("quarterly_progress").select("*").in_("goal_id", goal_ids).execute()
+            return prog_res.data
+        except Exception as e:
+            raise Exception({"error": str(e), "code": "CHECKIN_FETCH_ERROR"})
 
     @staticmethod
     def manager_checkin(goal_id: str, quarter: str, comment: str, manager_id: str):
@@ -85,26 +88,29 @@ class ProgressService:
 
     @staticmethod
     def get_team_checkins(manager_id: str):
-        # 1. Get employees
-        emp_res = supabase.table("users").select("id").eq("manager_id", manager_id).execute()
-        emp_ids = [e["id"] for e in emp_res.data]
-        if not emp_ids:
-            return []
-            
-        # 2. Get their sheets
-        sheet_res = supabase.table("goal_sheets").select("id").in_("employee_id", emp_ids).execute()
-        sheet_ids = [s["id"] for s in sheet_res.data]
-        if not sheet_ids:
-            return []
-            
-        # 3. Get goals
-        goals_res = supabase.table("goals").select("id").in_("sheet_id", sheet_ids).execute()
-        goal_ids = [g["id"] for g in goals_res.data]
-        if not goal_ids:
-            return []
-            
-        # 4. Get progress
-        prog_res = supabase.table("quarterly_progress").select("*").in_("goal_id", goal_ids).execute()
-        return prog_res.data
+        try:
+            # 1. Get employees
+            emp_res = supabase.table("users").select("id").eq("manager_id", manager_id).execute()
+            emp_ids = [e["id"] for e in emp_res.data]
+            if not emp_ids:
+                return []
+
+            # 2. Get their sheets
+            sheet_res = supabase.table("goal_sheets").select("id").in_("employee_id", emp_ids).execute()
+            sheet_ids = [s["id"] for s in sheet_res.data]
+            if not sheet_ids:
+                return []
+
+            # 3. Get goals
+            goals_res = supabase.table("goals").select("id").in_("sheet_id", sheet_ids).execute()
+            goal_ids = [g["id"] for g in goals_res.data]
+            if not goal_ids:
+                return []
+
+            # 4. Get progress
+            prog_res = supabase.table("quarterly_progress").select("*").in_("goal_id", goal_ids).execute()
+            return prog_res.data
+        except Exception as e:
+            raise Exception({"error": str(e), "code": "CHECKIN_FETCH_ERROR"})
 
 progress_service = ProgressService()

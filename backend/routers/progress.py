@@ -44,9 +44,8 @@ async def add_checkin(
 ):
     return progress_service.manager_checkin(goal_id, quarter.value, payload.manager_comment, user["id"])
 
-@checkins_router.get("/team/{manager_id}", response_model=List[ProgressResponse])
+@checkins_router.get("/team", response_model=List[ProgressResponse])
 async def get_team_checkins(
-    manager_id: str,
     user: dict = Depends(check_role(["manager", "admin"]))
 ):
-    return progress_service.get_team_checkins(manager_id)
+    return progress_service.get_team_checkins(user["id"])
