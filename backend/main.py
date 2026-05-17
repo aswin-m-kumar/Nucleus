@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from core.config import settings
-from routers import sheets, goals, admin, users, cycles
+from routers import sheets, goals, admin, users, cycles, progress, reports
 
 app = FastAPI(title="Nucleus — Goal Setting & Tracking Portal")
 
@@ -21,6 +21,9 @@ app.include_router(goals.router)
 app.include_router(admin.router)
 app.include_router(users.router)
 app.include_router(cycles.router)
+app.include_router(progress.achievements_router)
+app.include_router(progress.checkins_router)
+app.include_router(reports.router)
 
 # Global Exception Handler
 @app.exception_handler(Exception)

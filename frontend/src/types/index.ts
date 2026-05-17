@@ -49,3 +49,18 @@ export interface Cycle {
   window_close: string;
   is_active: boolean;
 }
+
+export type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';
+export type ProgressStatus = 'not_started' | 'on_track' | 'completed';
+
+export interface ProgressResponse {
+  id: string;
+  goal_id: string;
+  quarter: Quarter;
+  actual: number | null;
+  status: ProgressStatus;
+  employee_updated_at: string | null;
+  manager_comment: string | null;
+  manager_reviewed_at: string | null;
+}
+

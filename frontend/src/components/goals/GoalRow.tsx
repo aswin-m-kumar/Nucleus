@@ -1,5 +1,6 @@
 import type { Goal } from '../../types';
 import { Edit2, Trash2, Lock, Share2 } from 'lucide-react';
+import { Card } from '../ui/Card';
 
 interface GoalRowProps {
   goal: Goal;
@@ -10,7 +11,7 @@ interface GoalRowProps {
 
 const GoalRow = ({ goal, onEdit, onDelete, readOnly }: GoalRowProps) => {
   return (
-    <div className={`p-4 rounded-lg border ${goal.is_shared ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-200'} transition-shadow hover:shadow-md`}>
+    <Card className={`p-4 ${goal.is_shared ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-200'} transition-shadow hover:shadow-md`}>
       <div className="flex justify-between items-start mb-2">
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 bg-slate-100 text-[10px] font-bold text-slate-600 rounded uppercase">
@@ -27,7 +28,7 @@ const GoalRow = ({ goal, onEdit, onDelete, readOnly }: GoalRowProps) => {
           <div className="flex items-center gap-2">
             <button 
               onClick={() => onEdit?.(goal)}
-              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              className="p-1.5 text-slate-400 hover:text-[#1D9E75] hover:bg-teal-50 rounded transition-colors"
             >
               <Edit2 size={16} />
             </button>
@@ -66,7 +67,7 @@ const GoalRow = ({ goal, onEdit, onDelete, readOnly }: GoalRowProps) => {
           </span>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { User, GoalSheet, Cycle } from '../types';
+import type { User, Cycle } from '../types';
 
 export const listUsers = async () => {
   const response = await apiClient.get<User[]>('/admin/users');

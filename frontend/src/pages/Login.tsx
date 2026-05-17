@@ -4,6 +4,11 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../api/client';
 import { getDashboardRoute } from '../utils/roleUtils';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Card } from '../components/ui/Card';
+import { Alert } from '../components/ui/Alert';
 
 const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -88,89 +93,79 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-        <h2 className="text-3xl font-bold text-center text-slate-900 mb-2">Nucleus</h2>
-        <p className="text-center text-slate-500 mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#f4f6f8] px-4">
+      <Card className="max-w-md w-full !p-8 border-none shadow-md">
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-2">Nucleus</h2>
+        <p className="text-center text-gray-500 mb-8">
           {isSignUp ? 'Create a new account' : 'Sign in to your account'}
         </p>
         
         <form onSubmit={handleAuth} className="space-y-4">
           {isSignUp && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700">Role (For Testing)</label>
-                <select
-                  className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                >
-                  <option value="employee">Employee</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
+              <Input
+                label="Full Name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Select
+                label="Role (For Testing)"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                options={[
+                  { label: 'Employee', value: 'employee' },
+                  { label: 'Manager', value: 'manager' },
+                  { label: 'Admin', value: 'admin' },
+                ]}
+              />
             </>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Email</label>
-            <input
-              type="email"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+          <Input
+            label="Email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          <Input
+            label="Password"
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
           {error && (
-            <div className={`p-3 text-sm rounded ${error.includes('email') && isSignUp ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            <Alert type={error.includes('email') && isSignUp ? 'info' : 'error'} onClose={() => setError(null)}>
               {error}
-            </div>
+            </Alert>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors mt-6"
+            className="w-full mt-6"
+            size="lg"
           >
             {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-          </button>
+          </Button>
         </form>
 
         <div className="mt-6 text-center">
-          <button 
-            type="button"
+          <Button 
+            variant="secondary"
+            className="w-full border-none shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
             {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

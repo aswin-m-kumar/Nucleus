@@ -2,30 +2,55 @@ import { useEffect, useState } from 'react';
 import { getMySheet, submitSheet, createSheet } from '../api/sheets';
 import { getActiveCycle } from '../api/cycles';
 import { addGoal, updateGoal, deleteGoal } from '../api/goals';
-import type { GoalSheet, Goal } from '../types';
+import { getSheetAchievements } from '../api/progress';
+import type { GoalSheet, Goal, ProgressResponse, Quarter } from '../types';
 import GoalRow from '../components/goals/GoalRow';
 import GoalForm from '../components/goals/GoalForm';
 import WeightageBar from '../components/goals/WeightageBar';
+import ProgressRow from '../components/goals/ProgressRow';
 import { computeTotalWeightage, isValidWeightage } from '../utils/weightageUtils';
-import { Plus, Send, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Send, RefreshCw } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Alert as AlertComponent } from '../components/ui/Alert';
 
 const EmployeeDashboard = () => {
   const [sheet, setSheet] = useState<GoalSheet | null>(null);
+  const [progressData, setProgressData] = useState<ProgressResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creatingSheet, setCreatingSheet] = useState(false);
+  
+  const [activeQuarter, setActiveQuarter] = useState<Quarter>('Q1');
+  const [viewMode, setViewMode] = useState<'goals' | 'progress'>('goals');
 
   const fetchSheet = async () => {
     try {
       setLoading(true);
       const data = await getMySheet();
       setSheet(data);
+      if (data && data.status === 'approved') {
+        fetchProgress(data.id);
+        setViewMode('progress');
+      } else {
+        setViewMode('goals');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProgress = async (sheetId: string) => {
+    try {
+      const pData = await getSheetAchievements(sheetId);
+      setProgressData(pData);
+    } catch (err) {
+      console.error('Failed to fetch progress', err);
     }
   };
 
@@ -94,6 +119,9 @@ const EmployeeDashboard = () => {
     }
   };
 
+  const currentMonth = new Date().getMonth();
+  const currentQuarter: Quarter = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+
   if (loading) return <div className="flex items-center justify-center min-h-screen">Loading your goals...</div>;
 
   const totalWeightage = sheet ? computeTotalWeightage(sheet.goals) : 0;
@@ -108,33 +136,30 @@ const EmployeeDashboard = () => {
           <p className="text-slate-500">Cycle: {sheet?.cycle_id || 'Active Period'}</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-            sheet?.status === 'approved' ? 'bg-green-100 text-green-700' : 
-            sheet?.status === 'submitted' ? 'bg-blue-100 text-blue-700' : 
-            'bg-amber-100 text-amber-700'
-          }`}>
+          <Badge variant={
+            sheet?.status === 'approved' ? 'approved' : 
+            sheet?.status === 'submitted' ? 'submitted' : 
+            sheet?.status === 'returned' ? 'returned' : 'draft'
+          }>
             {sheet?.status || 'No Sheet'}
-          </span>
+          </Badge>
           {canSubmit && (
-            <button 
-              onClick={handleSubmitSheet}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm"
-            >
+            <Button onClick={handleSubmitSheet} className="flex items-center gap-2">
               <Send size={16} /> Submit for Approval
-            </button>
+            </Button>
           )}
         </div>
       </header>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
-          <AlertCircle size={18} /> {error}
-        </div>
+        <AlertComponent type="error" onClose={() => setError(null)} className="mb-6">
+          {error}
+        </AlertComponent>
       )}
 
       {sheet ? (
         <div className="space-y-6">
-          <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
+          <Card className="bg-slate-50 border border-slate-200">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-slate-800">Weightage Summary</h3>
               <span className={`text-sm font-bold ${isValidWeightage(totalWeightage) ? 'text-green-600' : 'text-red-600'}`}>
@@ -142,41 +167,105 @@ const EmployeeDashboard = () => {
               </span>
             </div>
             <WeightageBar goals={sheet.goals} />
-          </div>
+          </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sheet.goals.map(goal => (
-              editingGoal?.id === goal.id ? (
-                <div className="col-span-1 md:col-span-2" key={goal.id}>
-                  <GoalForm 
-                    initialData={goal} 
-                    onSubmit={handleUpdateGoal} 
-                    onCancel={() => setEditingGoal(null)} 
-                  />
-                </div>
-              ) : (
-                <GoalRow 
-                  key={goal.id} 
-                  goal={goal} 
-                  onEdit={isLocked ? undefined : setEditingGoal}
-                  onDelete={isLocked ? undefined : handleDeleteGoal}
-                  readOnly={isLocked}
-                />
-              )
-            ))}
-            
-            {!isLocked && !isAdding && sheet.goals.length < 8 && (
+          {sheet.status === 'approved' && (
+            <div className="flex border-b border-slate-200 mb-6">
               <button 
-                onClick={() => setIsAdding(true)}
-                className="col-span-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all"
+                className={`py-3 px-6 font-medium text-sm ${viewMode === 'goals' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setViewMode('goals')}
               >
-                <Plus size={32} className="mb-2" />
-                <span className="font-medium">Add New Goal</span>
+                Goal Details
               </button>
-            )}
-          </div>
+              <button 
+                className={`py-3 px-6 font-medium text-sm ${viewMode === 'progress' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setViewMode('progress')}
+              >
+                Track Progress
+              </button>
+            </div>
+          )}
 
-          {isAdding && (
+          {viewMode === 'progress' && sheet.status === 'approved' ? (
+            <Card className="bg-slate-50 border border-slate-200">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-slate-800">Quarterly Check-ins</h3>
+                <div className="flex gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                  {(['Q1', 'Q2', 'Q3', 'Q4'] as Quarter[]).map((q) => (
+                    <button
+                      key={q}
+                      onClick={() => setActiveQuarter(q)}
+                      className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${
+                        activeQuarter === q 
+                          ? 'bg-[#1D9E75] text-white' 
+                          : q === currentQuarter 
+                          ? 'text-[#1D9E75] bg-teal-50 border border-teal-200' 
+                          : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                      title={q === currentQuarter ? "Current Active Quarter" : ""}
+                    >
+                      {q} {q === currentQuarter && '📍'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {activeQuarter !== currentQuarter && (
+                  <AlertComponent type="warning">
+                    Progress can only be updated during the active calendar quarter ({currentQuarter}).
+                  </AlertComponent>
+                )}
+                {sheet.goals.map(goal => {
+                  const p = progressData.find(pd => pd.goal_id === goal.id && pd.quarter === activeQuarter);
+                  return (
+                    <ProgressRow 
+                      key={goal.id} 
+                      goal={goal} 
+                      quarter={activeQuarter}
+                      initialProgress={p}
+                      isEditable={activeQuarter === currentQuarter}
+                      onSaved={() => fetchProgress(sheet.id)}
+                    />
+                  );
+                })}
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sheet.goals.map(goal => (
+                editingGoal?.id === goal.id ? (
+                  <div className="col-span-1 md:col-span-2" key={goal.id}>
+                    <GoalForm 
+                      initialData={goal} 
+                      onSubmit={handleUpdateGoal} 
+                      onCancel={() => setEditingGoal(null)} 
+                    />
+                  </div>
+                ) : (
+                  <GoalRow 
+                    key={goal.id} 
+                    goal={goal} 
+                    onEdit={isLocked ? undefined : setEditingGoal}
+                    onDelete={isLocked ? undefined : handleDeleteGoal}
+                    readOnly={isLocked}
+                  />
+                )
+              ))}
+              
+              {!isLocked && !isAdding && sheet.goals.length < 8 && (
+                <button 
+                  onClick={() => setIsAdding(true)}
+                  className="col-span-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-300 rounded-lg text-slate-400 hover:border-[#1D9E75] hover:text-[#1D9E75] hover:bg-teal-50 transition-all"
+                >
+                  <Plus size={32} className="mb-2" />
+                  <span className="font-medium">Add New Goal</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {isAdding && viewMode === 'goals' && (
             <GoalForm 
               onSubmit={handleAddGoal} 
               onCancel={() => setIsAdding(false)} 
@@ -184,18 +273,17 @@ const EmployeeDashboard = () => {
           )}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+        <Card className="text-center py-20 border-slate-200">
           <RefreshCw size={48} className="mx-auto text-slate-300 mb-4 animate-spin-slow" />
           <h3 className="text-xl font-bold text-slate-800 mb-2">No active goal sheet</h3>
           <p className="text-slate-500 mb-6">Create a new sheet to start tracking your goals for this cycle.</p>
-          <button 
+          <Button 
             onClick={handleCreateSheet}
             disabled={creatingSheet}
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
             {creatingSheet ? 'Creating...' : 'Create Goal Sheet'}
-          </button>
-        </div>
+          </Button>
+        </Card>
       )}
     </div>
   );

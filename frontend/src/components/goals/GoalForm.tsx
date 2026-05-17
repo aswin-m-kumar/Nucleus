@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import type { Goal, UoMType } from '../../types';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
+import { Textarea } from '../ui/Textarea';
+import { Card } from '../ui/Card';
 
 interface GoalFormProps {
   initialData?: Partial<Goal>;
@@ -40,113 +45,104 @@ const GoalForm = ({ initialData, onSubmit, onCancel, isLoading }: GoalFormProps)
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-1">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Thrust Area</label>
-          <select 
-            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={formData.thrust_area}
-            onChange={(e) => setFormData({ ...formData, thrust_area: e.target.value })}
-          >
-            {THRUST_AREAS.map(area => <option key={area} value={area}>{area}</option>)}
-          </select>
-        </div>
-        
-        <div className="col-span-1">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">UoM Type</label>
-          <select 
-            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={formData.uom_type}
-            onChange={(e) => {
-              const newType = e.target.value as UoMType;
-              setFormData({ 
-                ...formData, 
-                uom_type: newType,
-                target: newType === 'zero' ? 0 : formData.target
-              });
-            }}
-          >
-            {UOM_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
-          </select>
-        </div>
-
-        <div className="col-span-2">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Goal Title</label>
-          <input 
-            type="text"
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          />
-        </div>
-
-        <div className="col-span-2">
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Description</label>
-          <textarea 
-            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            rows={2}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        </div>
-
-        {formData.uom_type !== 'zero' && (
+    <Card className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="col-span-1">
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Target {formData.uom_type === 'timeline' ? '(Date)' : '(Number)'}
-            </label>
-            {formData.uom_type === 'timeline' ? (
-              <input 
-                type="date"
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.target ? new Date(Number(formData.target)).toISOString().split('T')[0] : ''}
-                onChange={(e) => setFormData({ ...formData, target: new Date(e.target.value).getTime() })}
-              />
-            ) : (
-              <input 
-                type="number"
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.target}
-                onChange={(e) => setFormData({ ...formData, target: Number(e.target.value) })}
-              />
-            )}
+            <Select 
+              label="Thrust Area"
+              value={formData.thrust_area}
+              onChange={(e) => setFormData({ ...formData, thrust_area: e.target.value })}
+              options={THRUST_AREAS.map(area => ({ label: area, value: area }))}
+            />
           </div>
-        )}
+          
+          <div className="col-span-1">
+            <Select 
+              label="UoM Type"
+              value={formData.uom_type}
+              onChange={(e) => {
+                const newType = e.target.value as UoMType;
+                setFormData({ 
+                  ...formData, 
+                  uom_type: newType,
+                  target: newType === 'zero' ? 0 : formData.target
+                });
+              }}
+              options={UOM_TYPES}
+            />
+          </div>
 
-        <div className={`col-span-1 ${formData.uom_type === 'zero' ? 'col-start-1' : ''}`}>
-          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Weightage (%)</label>
-          <input 
-            type="number"
-            required
-            min={10}
-            className="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-            value={formData.weightage}
-            onChange={(e) => setFormData({ ...formData, weightage: Number(e.target.value) })}
-          />
+          <div className="col-span-2">
+            <Input 
+              label="Goal Title"
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            />
+          </div>
+
+          <div className="col-span-2">
+            <Textarea 
+              label="Description"
+              rows={2}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+          </div>
+
+          {formData.uom_type !== 'zero' && (
+            <div className="col-span-1">
+              {formData.uom_type === 'timeline' ? (
+                <Input 
+                  label="Target (Date)"
+                  type="date"
+                  required
+                  value={formData.target ? new Date(Number(formData.target)).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setFormData({ ...formData, target: new Date(e.target.value).getTime() })}
+                />
+              ) : (
+                <Input 
+                  label="Target (Number)"
+                  type="number"
+                  required
+                  value={formData.target}
+                  onChange={(e) => setFormData({ ...formData, target: Number(e.target.value) })}
+                />
+              )}
+            </div>
+          )}
+
+          <div className={`col-span-1 ${formData.uom_type === 'zero' ? 'col-start-1' : ''}`}>
+            <Input 
+              label="Weightage (%)"
+              type="number"
+              required
+              min={10}
+              value={formData.weightage}
+              onChange={(e) => setFormData({ ...formData, weightage: Number(e.target.value) })}
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="flex justify-end space-x-3 pt-4 border-top border-slate-100">
-        <button 
-          type="button" 
-          onClick={onCancel}
-          className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
-        >
-          Cancel
-        </button>
-        <button 
-          type="submit" 
-          disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-        >
-          {isLoading ? 'Saving...' : 'Save Goal'}
-        </button>
-      </div>
-    </form>
+        <div className="flex justify-end space-x-3 pt-4 mt-2">
+          <Button 
+            type="button" 
+            variant="secondary"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isLoading}
+          >
+            {isLoading ? 'Saving...' : 'Save Goal'}
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 };
 
